@@ -32,7 +32,7 @@ class ublox8_reader(Node):
     def __del__(self):
         self.get_logger().info("ublox8_reader Killed!")
     def read(self):
-        try:
+       try:
             line = self.ser.readline()
             string = line.decode('ascii')
             words = string.split(',')
@@ -42,27 +42,32 @@ class ublox8_reader(Node):
             
             if words[0] == '$GNGGA':
                 self.time = float(words[1])
-
+        
                 # Convert Latitude
                 lat_degrees = int(float(words[2]) / 100)
                 lat_minutes = float(words[2]) % 100
                 self.lat = lat_degrees + (lat_minutes / 60)
-
+        
                 # Convert Longitude
                 lon_degrees = int(float(words[4]) / 100)
                 lon_minutes = float(words[4]) % 100
                 self.long = lon_degrees + (lon_minutes / 60)
-
+        
                 self.NS = str(words[3])
                 self.EW = str(words[5])
                 self.fix = float(words[6])
-                self.alt = float(words[9])
-
+        
+                # Correct altitude using geoid separation
+                ellipsoid_alt = float(words[9])  # Altitude above WGS84 ellipsoid
+                geoid_separation = float(words[11])  # Difference between ellipsoid and geoid
+                self.alt = ellipsoid_alt - geoid_separation  # True altitude above sea level
+        
                 # Apply direction correction
                 if self.EW == 'W':
                     self.long *= -1
                 if self.NS == 'S':
                     self.lat *= -1
+
 
         except serial.serialutil.SerialException:
             self.get_logger().warning("No USB Connection to UBLOX8!")
