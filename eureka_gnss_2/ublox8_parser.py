@@ -33,24 +33,37 @@ class ublox8_reader(Node):
         self.get_logger().info("ublox8_reader Killed!")
     def read(self):
         try:
-            line=self.ser.readline()
+            line = self.ser.readline()
             string = line.decode('ascii')
             words = string.split(',')
             for c in range(len(words)):
-                if(words[c] == ''):
+                if words[c] == '':
                     words[c] = '0.0'
-            if(words[0] == '$GNGGA'):
+            
+            if words[0] == '$GNGGA':
                 self.time = float(words[1])
-                self.lat = float(words[2])
+
+                # Convert Latitude
+                lat_degrees = int(float(words[2]) / 100)
+                lat_minutes = float(words[2]) % 100
+                self.lat = lat_degrees + (lat_minutes / 60)
+
+                # Convert Longitude
+                lon_degrees = int(float(words[4]) / 100)
+                lon_minutes = float(words[4]) % 100
+                self.long = lon_degrees + (lon_minutes / 60)
+
                 self.NS = str(words[3])
-                self.long = float(words[4])
                 self.EW = str(words[5])
                 self.fix = float(words[6])
                 self.alt = float(words[9])
-                if(self.EW == 'W'):
+
+                # Apply direction correction
+                if self.EW == 'W':
                     self.long *= -1
-                if(self.NS == 'S'):
+                if self.NS == 'S':
                     self.lat *= -1
+
         except serial.serialutil.SerialException:
             self.get_logger().warning("No USB Connection to UBLOX8!")
             try:
